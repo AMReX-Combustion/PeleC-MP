@@ -90,7 +90,6 @@ contains
     use meth_params_module, only : URHO, UMX, UMY, UMZ, &
          UEDEN, UEINT, UFS, UTEMP, small_temp
     use amrex_constants_module, only: ZERO, HALF, M_PI
-    use extern_probin_module, only: const_viscosity, const_bulk_viscosity, const_conductivity, const_diffusivity
     use eos_module
 
     implicit none
@@ -134,20 +133,16 @@ contains
     ! Initial density, velocity, and material properties
     rho0 = eos_state % rho
     v0   = mach * eos_state % cs
-    const_bulk_viscosity = 0.d0
-    const_diffusivity = 0.d0
-    const_viscosity = rho0 * v0 * L / reynolds
-    const_conductivity = const_viscosity * eos_state % cp / prandtl
+
     state(:,:,:,UTEMP) = T0
 
     ! Write this out to file (might be useful for postprocessing)
     if ( amrex_pd_ioprocessor() ) then
        open(unit=out_unit,file="ic.txt",action="write",status="replace")
-       write(out_unit,*)"L, rho0, v0, p0, T0, gamma, mu, k, c_s0, Reynolds, Mach, Prandtl, omega_x, omega_y, omega_z"
+       write(out_unit,*)"L, rho0, v0, p0, T0, gamma, c_s0, Mach, omega_x, omega_y, omega_z"
        write(out_unit,*) L, "," , eos_state % rho, "," , v0, "," , eos_state % p, "," , &
-            eos_state % T, "," , eos_state % gam1, "," , const_viscosity, "," , &
-            const_conductivity, "," , eos_state % cs, "," , &
-            reynolds, "," , mach, "," , prandtl, ",", omega_x, ",", omega_y, ",", omega_z
+            eos_state % T, "," , eos_state % gam1, "," , eos_state % cs, "," , &
+            mach, "," , omega_x, ",", omega_y, ",", omega_z
        close(out_unit)
     endif
 
