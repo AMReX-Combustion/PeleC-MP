@@ -21,13 +21,15 @@ SPRAY_COMPONENTS = 8
 DEFINES += -DSPRAY_COMPONENTS=$(SPRAY_COMPONENTS)
 
 # This sets the EOS directory in $(PELE_PHYSICS_HOME)/Eos
-Eos_dir     := GammaLaw
+Eos_dir     := Fuego
 
 # This sets the network directory in $(PELE_PHYSICS_HOME)/Reactions
-Reactions_dir := Null
+Reactions_dir := Fuego 
+
+Chemistry_Model := decane_3sp
 
 # This sets the transport directory in $(PELE_PHYSICS_HOME)/Transport
-Transport_dir := Constant
+Transport_dir := EGLib
 
 Bpack   := ./Make.package
 
@@ -37,4 +39,4 @@ ifeq ($(DEBUG), TRUE)
 DEFINES += -DDEBUG
 endif
 
-DEFINES += -DBL_USE_EB
+
