@@ -59,6 +59,7 @@ SprayParticleContainer::SetAll (Real val, int pstate_idx, int lev)
     }
 
     return;
+#endif
 }
 
 void
