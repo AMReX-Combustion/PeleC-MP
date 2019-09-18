@@ -33,6 +33,14 @@ SprayParticleContainer::init_bcs()
 void
 SprayParticleContainer::SetAll (Real val, int pstate_idx, int lev)
 {
+#ifdef AMREX_USE_CUDA
+    
+  if(ParallelDescriptor::IOProcessor())
+    std::cout << "SprayParticleContainer::SetAll not active for CUDA" << '\n';
+
+  return;
+
+#else  
     BL_ASSERT(lev >= 0 && lev < GetParticles().size());
 
     ParticleLevel& plev = GetParticles(lev);
