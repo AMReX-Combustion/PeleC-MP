@@ -23,7 +23,6 @@ contains
     use control_parameters
     use spray_module
     use transport_module, only : get_transport_coeffs
-    use chemistry_module, only : nspecies
     implicit none
 
     integer,          intent(in   )        :: np

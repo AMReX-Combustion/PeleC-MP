@@ -84,7 +84,8 @@ contains
 
     use amrex_paralleldescriptor_module
     use probdata_module
-    use network, only: nspecies, naux, molec_wt
+    use network, only: nspecies, naux
+    use chemistry_module, only : get_species_index
     use eos_type_module
     use meth_params_module, only : URHO, UMX, UMY, UMZ, &
          UEDEN, UEINT, UFS, UTEMP, small_temp
@@ -109,10 +110,11 @@ contains
 
     type(eos_t) :: eos_state
 
-    call build(eos_state)
+    integer :: iN2, iO2
 
-    ! Define the molecular weight for air
-    molec_wt = 28.97
+    iN2 = get_species_index("N2")
+    iO2 = get_species_index("O2")
+    call build(eos_state)
 
     ! Define the length scale
     L = 1.d0/M_PI
@@ -125,7 +127,8 @@ contains
     eos_state % p = p0
     eos_state % T = T0
     eos_state % massfrac    = 0.d0
-    eos_state % massfrac(1) = 1.d0
+    eos_state % massfrac(iO2) = 0.233d0
+    eos_state % massfrac(iN2) = 0.767d0
     call eos_tp(eos_state)
 
     ! Initial density, velocity, and material properties
@@ -142,7 +145,7 @@ contains
        open(unit=out_unit,file="ic.txt",action="write",status="replace")
        write(out_unit,*)"L, rho0, v0, p0, T0, gamma, mu, k, c_s0, Reynolds, Mach, Prandtl, omega_x, omega_y, omega_z"
        write(out_unit,*) L, "," , eos_state % rho, "," , v0, "," , eos_state % p, "," , &
-            eos_state % T, "," , gamma_const, "," , const_viscosity, "," , &
+            eos_state % T, "," , eos_state % gam1, "," , const_viscosity, "," , &
             const_conductivity, "," , eos_state % cs, "," , &
             reynolds, "," , mach, "," , prandtl, ",", omega_x, ",", omega_y, ",", omega_z
        close(out_unit)
