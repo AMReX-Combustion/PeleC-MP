@@ -2,21 +2,21 @@ subroutine amrex_probinit (init,name,namlen,problo,probhi) bind(c)
 
   use probdata_module
   use amrex_error_module
+  use flame_data_module
   implicit none
 
   integer :: init, namlen
   integer :: name(namlen)
-  double precision :: problo(3), probhi(3)
+  double precision :: problo(3), probhi(3), L
+  character(len=72) :: flame_datafile = ''
 
   integer untin,i
 
-  namelist /fortin/ u_ref, p_ref, T_ref, cnO2, cnN2_1, cnN2_2, cnFuel, &
-       hz, delz
+  namelist /fortin/ flame_datafile, p_ref, T_ref, u_ref
     
   ! Build "probin" filename -- the name of file containing fortin namelist.
   integer, parameter :: maxlen = 256
   character probin*(maxlen)
-
   if (namlen .gt. maxlen) then
      call amrex_error('probin file name too long')
   end if
@@ -25,15 +25,9 @@ subroutine amrex_probinit (init,name,namlen,problo,probhi) bind(c)
      probin(i:i) = char(name(i))
   end do
 
-  hz = 1.d0
-  delz = 0.2d0
-
-  u_ref = 0.d0
-  cnN2_1 = 0.767
-  cnO2 = 1.d0 - cnN2_1
-  cnN2_2 = 0.6023
-  cnFuel = 1.d0 - cnN2_2
-
+  p_ref = 1.01325d6
+  u_ref = 0.
+  T_ref = 300.d0
 
   ! Read namelists
   untin = 9
@@ -41,6 +35,8 @@ subroutine amrex_probinit (init,name,namlen,problo,probhi) bind(c)
   read(untin,fortin)
   close(unit=untin)
 
+  L = probhi(1) - problo(1)
+  call initialize_flame_data(flame_datafile, L)
 end subroutine amrex_probinit
 
 
@@ -78,7 +74,6 @@ end subroutine amrex_probinit
   use amrex_constants_module, only: ZERO, HALF, M_PI
   use prob_params_module, only: problo, probhi
   use soot_model_module
-  !use extern_probin_module, only: const_viscosity, const_bulk_viscosity, const_conductivity, const_diffusivity
   use eos_module
   
   implicit none
@@ -93,40 +88,16 @@ end subroutine amrex_probinit
 
   integer :: i,j,k,isoot,sootcomp
   double precision :: x,y,z,rho,u,v,w,eint
-  double precision :: L, rho0, v0, p0, T0, zmix
+  double precision :: L, p0
   double precision :: moms(7)
   integer, parameter :: out_unit=20
+  double precision, allocatable :: flame_Y(:)
+  double precision :: flame_T, flame_U, flame_Rho
   
   type(eos_t) :: eos_state
-  
-  integer :: iN2, iO2, iFuel
-
-  iN2 = get_species_index("N2")
-  iO2 = get_species_index("O2")
-  iFuel = get_species_index("N-C7H16")
 
   call build(eos_state)
-
-  ! Define the length scale
-  L = probhi(1) - problo(1)
-
-  ! Initial pressure and temperature
-  p0 = p_ref ! [erg cm^-3]
-  T0 = T_ref
-
-  ! Set the equation of state variables
-  eos_state % p = p0
-  eos_state % T = T0
-  eos_state % massfrac    = 0.d0
-  eos_state % massfrac(iO2) = cnO2
-  eos_state % massfrac(iN2) = cnN2_1
-
-  call eos_tp(eos_state)
-
-  ! Initial density, velocity, and material properties
-  rho0 = eos_state % rho
-  v0   = u_ref ! cgs
-  state(:,:,:,UTEMP) = T0
+  allocate(flame_Y(nspecies))
 
   ! Initialize soot moments to zero
   call fi_init_soot_vars(moms)
@@ -144,23 +115,18 @@ end subroutine amrex_probinit
         do i = lo(1), hi(1)
            x = xlo(1) + delta(1)*(dble(i-lo(1)) + HALF)
 
-!            zmix = 1.d0/4.d0*(1.d0 + tanh((L + hz + delz - 2.d0*y)/delz))* &
-!                 (1.d0 + tanh((-L + hz + delz + 2.d0*y)/delz))
-           zmix = 0.143d0
-           u = v0
+           call flame(x, flame_Rho, flame_T, flame_U, flame_Y)
+           eos_state % massfrac(1:nspecies) = flame_Y(1:nspecies)
+           u = flame_U
            v = 0.d0
            w = 0.d0
 
-           eos_state % p   =  p0
-
-           eos_state % massfrac = 0.d0
-           eos_state % massfrac(iN2) = (1.d0 - zmix)*cnN2_1 + zmix*cnN2_2
-           eos_state % massfrac(iO2) = (1.d0 - zmix)*cnO2
-           eos_state % massfrac(iFuel) = zmix*cnFuel
-           ! Call EOS by specifying the temperature and pressure
-           call eos_tp(eos_state)
-           rho  = eos_state % rho
+           eos_state % rho =  flame_rho
+           eos_state % T = flame_T
+           ! Call EOS by specifying the temperature and density
+           call eos_rt(eos_state)
            eint = eos_state % e
+           rho = eos_state % rho
 
            ! Fill the states
            state(i,j,k,URHO)            = rho
@@ -170,6 +136,7 @@ end subroutine amrex_probinit
            state(i,j,k,UMZ)             = rho * w
            state(i,j,k,UEINT)           = rho * eint
            state(i,j,k,UEDEN)           = rho * (eint + HALF * (u**2 + v**2 + w**2))
+           state(i,j,k,UTEMP)           = flame_T
         enddo
      enddo
   enddo

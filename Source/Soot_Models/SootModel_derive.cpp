@@ -38,7 +38,7 @@ void soot_largepartmeanvol (const amrex::Box& bx, amrex::FArrayBox& vlfab, int d
 	Real M00 = dat(i,j,k,PeleC::FirstSootVar);
 	Real M10 = dat(i,j,k,PeleC::FirstSootVar + 1);
 	Real N0 = dat(i,j,k,PeleC::FirstSootVar + PeleC::NumSootVars - 1);
-	vl(i,j,k,dcomp) = (M10 - N0*SootModel::V0)/(M00 - N0 + 1.E-30);
+	vl(i,j,k,dcomp) = (M10 - N0*SootModel::m_V0)/(M00 - N0);
       }
     }
   }
@@ -58,7 +58,7 @@ void soot_largepartsurfarea (const amrex::Box& bx, amrex::FArrayBox& slfab, int 
 	Real M00 = dat(i,j,k,PeleC::FirstSootVar);
 	Real M01 = dat(i,j,k,PeleC::FirstSootVar + 2);
 	Real N0 = dat(i,j,k,PeleC::FirstSootVar + PeleC::NumSootVars - 1);
-	sl(i,j,k,dcomp) = (M01 - N0*SootModel::S0)/(M00 - N0 + 1.E-30);
+	sl(i,j,k,dcomp) = (M01 - N0*SootModel::m_S0)/(M00 - N0);
       }
     }
   }

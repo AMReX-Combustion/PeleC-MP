@@ -7,6 +7,9 @@
 
 // AMReX include statements
 #include <AMReX_REAL.H>
+#include <AMReX_Box.H>
+#include <AMReX_Vector.H>
+#include <AMReX_Derive.H>
 
 // PeleC include statements
 
@@ -18,7 +21,7 @@ using namespace amrex;
 #endif
 
 // Local gas species index, not the same as what comes from PelePhysics
-// Use SootIndxtoPeleP to convert between
+// Use gasIndxtoPeleP to convert between
 enum GasSpecIndx
   {
     // Hardcoded indices for species in m_specSootRefs
@@ -93,7 +96,8 @@ public:
   void addSootSourceTerm (const Box&       sbox,
 			  const FArrayBox& Qfab,
 			  const FArrayBox& coeff_cc,
-			  FArrayBox&       Sfab) const;
+			  FArrayBox&       Sfab,
+			  Real&            dt) const;
 
   /***********************************************************************
     Moment source term functions (SootModel.cpp)
@@ -148,8 +152,6 @@ public:
 		       const Vector<Real>& momFV,
 		       Vector<Real>&       mom_src) const;
 
-
-
   /***********************************************************************
     Reaction functions (SootModel_react.cpp)
   ***********************************************************************/
@@ -164,8 +166,7 @@ public:
 		    Real&               k_ox,
 		    Real&               k_o2,
 		    Vector<Real>&       omega_src,
-		    Real&               rho_src,
-		    Real&               eng_src) const;
+		    Real&               rho_src) const;
 
   //
   // Initialize reaction and species data
@@ -274,22 +275,22 @@ public:
   //
   // Convert moments from CGS to mol of C
   //
-  inline void convertCGStoMol (Vector<Real>& moments) const
+  static void convertCGStoMol (Vector<Real>& moments)
   {
     for (int i = 0; i != NUM_SOOT_MOMENTS + 1; ++i)
       {
-	moments[i] /= m_momUnitConv[i];
+	moments[i] /= MomUnitConv[i];
       }
-  }  
-   
+  }
+
   //
   // Convert moments from mol of C to CGS
   //
-  inline void convertMoltoCGS (Vector<Real>& mom_src) const
+  static void convertMoltoCGS (Vector<Real>& mom_src)
   {
     for (int i = 0; i != NUM_SOOT_MOMENTS + 1; ++i)
       {
-	mom_src[i] *= m_momUnitConv[i];
+	mom_src[i] *= MomUnitConv[i];
       }
   }
 
@@ -332,12 +333,13 @@ public:
   //
   // Initialize moment values to very small 
   //
-  inline void initialSmallMomVals (Vector<Real>& moments) const
+  static void initialSmallMomVals (Vector<Real>& moments)
   {
     for (int i = 0; i != NUM_SOOT_MOMENTS; ++i)
       {
-	moments[i] = 1.E-26*std::pow(40., MomOrderV[i] + 2./3.*MomOrderS[i]);
+	moments[i] = 1.E-26*std::pow(40., 3.*(MomOrderV[i] + 2./3.*MomOrderS[i]));
       }
+    moments[NUM_SOOT_MOMENTS] = 1.E-26;
     convertMoltoCGS(moments);
   }
 
@@ -376,9 +378,11 @@ public:
   /// Bool for checking if parameters have been read from input file
   bool m_readSootParams;
   /// Volume of smallest soot particles
-  static Real V0;
+  static Real m_V0;
   /// Surface area of smallest soot particles
-  static Real S0;
+  static Real m_S0;
+  /// Moment unit conversion from cm^(x+2/3y)/cm^3 to mol of C
+  static Real MomUnitConv[NUM_SOOT_MOMENTS + 1];
 
   /// Free molecular size exponents
   const Real m_SootAv;
@@ -471,8 +475,6 @@ public:
   Real m_nuclVolExp3[11];
   /// Store dimerVol^(n/6), where n = -3,-2,...,7
   Real m_nuclVolExp6[11];
-  /// Moment unit conversion from cm^(x+2/3y)/cm^3 to mol of C
-  Real m_momUnitConv[NUM_SOOT_MOMENTS + 1];
   /// Condensation constant
   Real m_condFact;
   /// Coagulation constants

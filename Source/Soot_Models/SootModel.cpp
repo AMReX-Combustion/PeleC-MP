@@ -19,8 +19,13 @@
 
 using namespace amrex;
 
-Real SootModel::V0 = 0.;
-Real SootModel::S0 = 0.;
+Real SootModel::m_V0 = 0.;
+Real SootModel::m_S0 = 0.;
+#if NUM_SOOT_MOMENTS == 3
+Real SootModel::MomUnitConv[4] = {0., 0., 0., 0.};
+#elif NUM_SOOT_MOMENTS == 6
+Real SootModel::MomUnitConv[7] = {0., 0., 0., 0., 0., 0., 0.};
+#endif
 
 // Default constructor
 SootModel::SootModel()
@@ -56,6 +61,7 @@ SootModel::define()
   // Initialize reaction and species member data
   initializeReactData();
 
+  // From SootModel_react.cpp
   // Fill surface reaction data
   fillReactionData();
 
@@ -69,8 +75,10 @@ void
 SootModel::addSootSourceTerm(const Box&       vbox,
 			     const FArrayBox& Qfab,
 			     const FArrayBox& coeff_cc,
-			     FArrayBox&       Sfab) const
+			     FArrayBox&       Sfab,
+			     Real&            dt) const
 {
+  BL_PROFILE("SootModel::addSootSourceTerm");
   if (m_sootVerbosity)
     {
       Print() << "SootModel::addSootSourceTerm(): Adding soot source term to "
@@ -101,14 +109,16 @@ SootModel::addSootSourceTerm(const Box&       vbox,
   // Vector of moment values M_xy (cm^(3(x + 2/3y))cm^(-3))
   // M00, M10, M01,..., N0
   Vector<Real> moments(numSootVar);
-  // These are the values inside the terms in fracMom
-  // momFV[NUM_SOOT_MOMENTS] - Weight of the delta function
-  // momFV[NUM_SOOT_MOMENTS+1] - modeCoef
-  // where modeCoef signifies the number of modes to be used
-  // If the moments are effectively zero, modeCoef = 0. and only 1 mode is used
-  // Otherwise, modeCoef = 1. and both modes are used
-  // The rest of the momFV values are used in fracMom fact1 = momFV[0],
-  // fact2 = momFV[1]^volOrd, fact2 = momFV[2]^surfOrd, etc.
+  /*
+    These are the values inside the terms in fracMom
+    momFV[NUM_SOOT_MOMENTS] - Weight of the delta function
+    momFV[NUM_SOOT_MOMENTS+1] - modeCoef
+    where modeCoef signifies the number of modes to be used
+    If the moments are effectively zero, modeCoef = 0 and only 1 mode is used
+    Otherwise, modeCoef = 1 and both modes are used
+    The rest of the momFV values are used in fracMom fact1 = momFV[0],
+    fact2 = momFV[1]^volOrd, fact2 = momFV[2]^surfOrd, etc.
+  */
   Vector<Real> momFV(numSootVar + 1, 0.);
   // Vector of source terms for moment equations
   Vector<Real> mom_src(numSootVar, 0.);
@@ -154,7 +164,7 @@ SootModel::addSootSourceTerm(const Box&       vbox,
 	// Convert moments from CGS to mol of C
 	convertCGStoMol(moments);
 	// Compute constant values used throughout
-	// (R*T*Pi/(2*A*rho_soot))^(1/2), (sqrt(cm^5 s^-2))
+	// (R*T*Pi/(2*A*rho_soot))^(1/2)
 	const Real convT = std::sqrt(m_colFact*T);
 	// Constant for free molecular collisions
 	const Real colConst = convT*m_colFactPi23*m_colFact16*avogadros;
@@ -162,7 +172,7 @@ SootModel::addSootSourceTerm(const Box&       vbox,
 	// molecular regime with van der Waals enhancement
 	// Units: cm^3/mol-s
 	const Real betaNucl = convT*m_betaNuclFact;
-	const Real betaDimer = m_betaDimerFact*convT;
+	const Real betaDimer = convT*m_betaDimerFact;
 	// Compute the vector of factors used for moment interpolation
 	computeFracMomVect(moments, momFV);
 	// Estimate [DIMER]
@@ -177,13 +187,13 @@ SootModel::addSootSourceTerm(const Box&       vbox,
 	// and fragmentation (k_o2)
 	Real k_sg,k_ox, k_o2;
 	// Compute the species reaction source terms into omega_src
-	// Also return the continuity and energy source terms
-	Real rho_src, eng_src;
+	// Also return the continuity source term
+	Real rho_src;
 	chemicalSrc(T, xi_n, moments, momFV, k_sg, k_ox, k_o2,
-		    omega_src, rho_src, eng_src);
+		    omega_src, rho_src);
 	// Add the surface growth source to mom_src
 	surfaceGrowthMomSrc(k_sg, momFV, mom_src);
-	if (moments[1]*V0*avogadros > 1.E-12)
+	if (moments[1]*m_V0*avogadros > 1.E-12)
 	  {
 	    // Add the oxidation and fragmentation source terms to mom_src
 	    oxidFragMomSrc(k_ox, k_o2, momFV, mom_src);
@@ -474,7 +484,7 @@ SootModel::computeFracMomVect(const Vector<Real>& moments,
   const Real M01 = moments[2] - m_momFact[2]*moments[3];
 
   // If moments are effectively zero, only use one mode
-  if (M00 < 1.E-30 || M10 < 1.E-30 || M01 < 1.E-30)
+  if (M00 < 1.E-36 || M10 < 1.E-36 || M01 < 1.E-36)
     {
       // Contribution from only one mode
       momFV[0] = moments[0];
@@ -500,7 +510,7 @@ SootModel::computeFracMomVect(const Vector<Real>& moments,
 
   const Real minMom = std::min({M00, M10, M01, M20, M11, M02});
   // If moments are effectively zero, only use one mode
-  if (minMom < 1.E-30)
+  if (minMom < 1.E-36)
     {
       const Real c1 = std::pow(moments[0], -1.5);
       const Real c2 = std::pow(moments[0], 0.5);
@@ -543,7 +553,7 @@ SootModel::fracMomLarge(const Real          volOrd,
   // If the moment is negative, return a small (consistent) value
   if (outMom <= 0. || outMom != outMom)
     {
-      return factor*1.E-60;
+      return factor*1.E-66;
     }
   return outMom;
 }
@@ -575,14 +585,7 @@ SootModel::fracMom(const Real          volOrd,
   Real bothPFact = modeCoef*std::pow(m_nuclVol, volOrd)*
     std::pow(m_nuclSurf, surfOrd);
 #endif
-  if (fact1 != fact1)
-    {
-      return 0.;
-    }
-  else
-    {
-      return bothPFact*momFV[6] + fact1;
-    }
+  return bothPFact*momFV[6] + fact1;
 }
 
 // Interpolation for the reduced mass term (square root of sum) in the

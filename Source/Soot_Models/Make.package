@@ -1,3 +1,6 @@
 
 CEXE_headers += SootModel.H SootModel_derive.H
 CEXE_sources += SootModel.cpp SootModel_react.cpp SootModel_setup.cpp SootModel_derive.cpp
+
+CEXE_sources += soot_model_fi.cpp
+F90EXE_sources += soot_model_mod.F90

@@ -3,6 +3,9 @@
  u_ref = 0.d0
  p_ref = 1.01325d6
  T_ref = 300.d0
+ flamelet_datafile = "datafile_init/nHeptane_flamelet.dat"
+ turbulence_datafile = "datafile_init/hit_ic_48_1200.dat"
+ inres = 1200
 
 /
 

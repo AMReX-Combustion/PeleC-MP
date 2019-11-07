@@ -63,7 +63,8 @@ SootModel::initializeReactData()
   m_nuclSurf = std::pow(m_nuclVol, 2./3.);
   if (!corrPAH)
     {
-      Abort(m_PAHname + " not recognized as PAH inception species");
+      Abort(m_PAHname + " not recognized as PAH inception species. Must be" +
+	    PAH_names[0] + ", " + PAH_names[1] + ", or " + PAH_names[2]);
     }
   // Retrieve the molecular weights
   Vector<Real> species_mm(PeleC::NumSpec);
@@ -280,8 +281,7 @@ SootModel::chemicalSrc(const Real&         T,
 		       Real&               k_ox,
 		       Real&               k_o2,
 		       Vector<Real>&       omega_src,
-		       Real&               rho_src,
-		       Real&               eng_src) const
+		       Real&               rho_src) const
 {
   // Number of surface reactions
   const int nsr = m_numSurfReacts;
@@ -318,7 +318,7 @@ SootModel::chemicalSrc(const Real&         T,
 	}
       w_bkwd[i] = k_bkwd[i]*bkwdM;
     }
-  // Factor r for the quasi-steady state concentration of radical sites
+
   // TODO: This will depend on the surface reactions, currently hardcoded
   Real fSootStar = computeRadSiteConc(xi_n, k_fwd, k_bkwd);
   computeSurfRates(xi_n, w_fwd, w_bkwd, fSootStar, k_sg, k_ox, k_o2);
@@ -335,14 +335,13 @@ SootModel::chemicalSrc(const Real&         T,
     {
       int sootIndx = sIndx_f[i];
       BL_ASSERT(sootIndx >= 0);
-      Real xi_soot = C_Soot[sootIndx];
-      w_fwd[i] *= xi_soot;
+      w_fwd[i] *= C_Soot[sootIndx];
       sootIndx = sIndx_b[i];
       BL_ASSERT(sootIndx >= 0);
-      xi_soot = C_Soot[sootIndx];
-      w_bkwd[i] *= xi_soot;
+      w_bkwd[i] *= C_Soot[sootIndx];
     }
-  Real surf = S0*fracMom(0., 1., momFV);
+  // TODO: This is specific to the hardcoded 6th reaction, not universal
+  Real surf = m_S0*fracMom(0., 1., momFV);
   w_fwd[5] *= surf;
   // Loop over gas species and solve for omegas
   for (int i = 0; i != nsr; ++i)
@@ -367,7 +366,6 @@ SootModel::chemicalSrc(const Real&         T,
   // Loop over each species to convert to proper units
   // and to compute continuity source term
   rho_src = 0.;
-  eng_src = 0.; // Unused since energy already contains sensible and chemical
   for (int i = 0; i != ngs; ++i)
     {
       const Real cmm = m_gasMW[i];
@@ -376,7 +374,7 @@ SootModel::chemicalSrc(const Real&         T,
     }
 }
 
-// Return fSootStar
+// Return fSootStar, fraction of hydrogenated sites that are radical sites
 Real
 SootModel::computeRadSiteConc(const Vector<Real>& xi_n,
 			      const Vector<Real>& k_fwd,
@@ -387,6 +385,7 @@ SootModel::computeRadSiteConc(const Vector<Real>& xi_n,
   Real C_H2 = xi_n[GasSpecIndx::indxH2];
   Real C_H2O = xi_n[GasSpecIndx::indxH2O];
   Real C_C2H2 = xi_n[GasSpecIndx::indxC2H2];
+  // Factor r for the quasi-steady state concentration of radical sites, r1/r2
   Real r1 = (k_fwd[0]*C_OH + k_fwd[1]*C_H + k_fwd[2]);
   Real r2 = (k_bkwd[0]*C_H2O + k_bkwd[1]*C_H2 + k_bkwd[2]*C_H 
 	       + k_fwd[3]*C_C2H2);

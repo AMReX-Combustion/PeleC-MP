@@ -2,7 +2,8 @@
 
  u_ref = 0.d0
  p_ref = 1.01325d6
- T_ref = 2400.d0
+ T_ref = 300.d0
+ flame_datafile = "datafile_init/initial_flame_profile.dat"
 
 /
 
