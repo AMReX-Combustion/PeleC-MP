@@ -44,6 +44,7 @@ void passive_move(SprayParticleContainer::ParticleType& p,
     amrex::Real coef_lhh = wx_lo * wy_hi * wz_hi;
     amrex::Real coef_hhh = wx_hi * wy_hi * wz_hi;
 
+    //Gas u-velocity interpolated to particle position
     amrex::Real u_p = 
                 coef_lll*state_arr(i-1, j-1, k-1, xmom_idx)/state_arr(i-1, j-1, k-1, rho_idx) + 
                 coef_llh*state_arr(i-1, j-1, k  , xmom_idx)/state_arr(i-1, j-1, k  , rho_idx) + 
@@ -53,6 +54,34 @@ void passive_move(SprayParticleContainer::ParticleType& p,
                 coef_hlh*state_arr(i,   j-1, k  , xmom_idx)/state_arr(i,   j-1, k  , rho_idx) + 
                 coef_hhl*state_arr(i,   j,   k-1, xmom_idx)/state_arr(i,   j,   k-1, rho_idx) + 
                 coef_hhh*state_arr(i,   j,   k  , xmom_idx)/state_arr(i,   j,   k  , rho_idx) ;
+
+    //Gas v-velocity interpolated to particle position
+    amrex::Real v_p =
+                coef_lll*state_arr(i-1, j-1, k-1, ymom_idx)/state_arr(i-1, j-1, k-1, rho_idx) +
+                coef_llh*state_arr(i-1, j-1, k  , ymom_idx)/state_arr(i-1, j-1, k  , rho_idx) +
+                coef_lhl*state_arr(i-1, j,   k-1, ymom_idx)/state_arr(i-1, j,   k-1, rho_idx) +
+                coef_lhh*state_arr(i-1, j,   k  , ymom_idx)/state_arr(i-1, j,   k  , rho_idx) +
+                coef_hll*state_arr(i,   j-1, k-1, ymom_idx)/state_arr(i,   j-1, k-1, rho_idx) +
+                coef_hlh*state_arr(i,   j-1, k  , ymom_idx)/state_arr(i,   j-1, k  , rho_idx) +
+                coef_hhl*state_arr(i,   j,   k-1, ymom_idx)/state_arr(i,   j,   k-1, rho_idx) +
+                coef_hhh*state_arr(i,   j,   k  , ymom_idx)/state_arr(i,   j,   k  , rho_idx) ;
+
+    //Gas w-velocity interpolated to particle position
+    amrex::Real w_p =
+                coef_lll*state_arr(i-1, j-1, k-1, zmom_idx)/state_arr(i-1, j-1, k-1, rho_idx) +
+                coef_llh*state_arr(i-1, j-1, k  , zmom_idx)/state_arr(i-1, j-1, k  , rho_idx) +
+                coef_lhl*state_arr(i-1, j,   k-1, zmom_idx)/state_arr(i-1, j,   k-1, rho_idx) +
+                coef_lhh*state_arr(i-1, j,   k  , zmom_idx)/state_arr(i-1, j,   k  , rho_idx) +
+                coef_hll*state_arr(i,   j-1, k-1, zmom_idx)/state_arr(i,   j-1, k-1, rho_idx) +
+                coef_hlh*state_arr(i,   j-1, k  , zmom_idx)/state_arr(i,   j-1, k  , rho_idx) +
+                coef_hhl*state_arr(i,   j,   k-1, zmom_idx)/state_arr(i,   j,   k-1, rho_idx) +
+                coef_hhh*state_arr(i,   j,   k  , zmom_idx)/state_arr(i,   j,   k  , rho_idx) ;
+
+    //Move particles to new position
+    p.pos(0) += u_p*dt;
+    p.pos(1) += v_p*dt;
+    p.pos(2) += w_p*dt;
+
 }
 
 
