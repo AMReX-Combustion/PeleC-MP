@@ -3,6 +3,8 @@
 #include <AMReX_Particles.H>
 #include <Transport_F.H>
 #include <drag_F.H>
+#include <PeleC.H>
+#include <spray_kernels.H>
 
 using namespace amrex;
 
@@ -130,6 +132,23 @@ SprayParticleContainer::moveKickDrift (MultiFab& state,
 
     for (MyParIter pti(*this, lev); pti.isValid(); ++pti) {
 
+#ifdef AMREX_USE_CUDA
+
+        int Np = pti.numParticles();
+        ParticleType * pstruct = &(pti.GetArrayOfStructs()[0]);
+
+        Array4<Real> const& state_arr  = (*state_ptr)[pti].array();  
+
+        int rho_idx = PeleC::Density, xmom_idx = PeleC::Xmom;
+        int ymom_idx = PeleC::Ymom, zmom_idx = PeleC::Zmom;
+
+        AMREX_PARALLEL_FOR_1D ( Np, i,
+        {
+            passive_move(pstruct[i], state_arr, rho_idx, xmom_idx, ymom_idx, zmom_idx,
+                         dx, plo, dt);
+        }); 
+
+#else
         AoS& particles = pti.GetArrayOfStructs();
         int Np = particles.size();
 
@@ -145,6 +164,7 @@ SprayParticleContainer::moveKickDrift (MultiFab& state,
                             domain.loVect(), domain.hiVect(),
                             plo,phi,reflect_lo,reflect_hi,dx,dt,&do_move);
         }
+#endif
     }
 
     // ********************************************************************************
