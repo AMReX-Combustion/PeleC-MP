@@ -48,3 +48,7 @@ include ${PELEC_HOME}/Exec/Make.PeleC
 ifeq ($(DEBUG), TRUE)
 DEFINES += -DDEBUG
 endif
+
+# To add lblas
+LIBRARY_LOCATIONS +=/gpfs/alpine/proj-shared/csc340/arientm/sw4_uberenv/uberenv_libs/spack/opt/spack/linux-rhel7-ppc64le/gcc-5.4.0/netlib-lapack-3.8.0-2zkztxddylrbg4yua4bgm7afwcsgyh34/lib64/
+override XTRALIBS += -lblas

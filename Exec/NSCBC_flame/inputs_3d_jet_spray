@@ -1,0 +1,110 @@
+# ------------------  INPUTS TO MAIN PROGRAM  -------------------
+max_step = 68901
+stop_time = 3.
+#pelec.fixed_dt = 2e-7
+# PROBLEM SIZE & GEOMETRY
+#geometry.is_periodic = 0 1 1 
+geometry.is_periodic = 1 1 1 
+geometry.coord_sys   = 0  # 0 => cart, 1 => RZ  2=>spherical
+geometry.prob_lo     =   -0.12 -0.06 0.0
+geometry.prob_hi     =  0.12 0.06 0.24
+# use with single level
+amr.n_cell           =  128 64 128
+
+# >>>>>>>>>>>>>  BC FLAGS <<<<<<<<<<<<<<<<
+# 0 = Interior           3 = Symmetry
+# 1 = Inflow             4 = SlipWall
+# 2 = Outflow            5 = NoSlipWall
+# >>>>>>>>>>>>>  BC FLAGS <<<<<<<<<<<<<<<<
+pelec.lo_bc       =  "Interior" "Interior" "Interior"
+pelec.hi_bc       =  "Interior" "Interior" "Interior"
+#pelec.lo_bc       =  "UserBC" "Interior" "Interior"
+#pelec.hi_bc       =  "UserBC" "Interior" "Interior"
+pelec.i_nscbc = 1
+
+#pelec.lo_bc       =  2 0 0
+#pelec.hi_bc       =  2 0 0
+#pelec.i_nscbc = 0
+
+# WHICH PHYSICS
+pelec.do_hydro = 1
+pelec.diffuse_vel = 1 
+pelec.diffuse_temp = 1 
+pelec.do_react = 0
+pelec.do_grav = 0
+pelec.allow_negative_energy = 1
+
+pelec.ppm_type = 2
+
+# TIME STEP CONTROL
+pelec.cfl            = 0.1   # cfl number for hyperbolic system
+pelec.init_shrink    = 1.0     # scale back initial timestep
+pelec.change_max     = 1.1     # max time step growth
+pelec.dt_cutoff      = 5.e-20  # level 0 timestep below which we halt
+
+# DIAGNOSTICS & VERBOSITY
+pelec.sum_interval   = -1      # timesteps between computing mass
+pelec.v              = 1       # verbosity in Castro.cpp
+amr.v                = 1       # verbosity in Amr.cpp
+#amr.data_log         = datlog
+#amr.grid_log        = grdlog  # name of grid logging file
+
+# REFINEMENT / REGRIDDING 
+amr.max_level       = 0       # maximum level number allowed
+amr.ref_ratio       = 2 2 2 2 2 2 2 2 # refinement ratio
+amr.regrid_int      = 2 # how often to regrid
+amr.blocking_factor = 16      # block factor in grid generation
+amr.max_grid_size   = 16 
+amr.n_error_buf     = 4 4 4 4 4 4 4 4 4 # number of buffer cells in error est
+amr.grid_eff        = 0.90
+
+# PARTICLES / SPRAY
+pelec.do_spray_particles = 1
+particles.mass_transfer = 0
+particles.heat_transfer = 0
+particles.mom_transfer = 0
+particles.particle_output_file = "plt"
+particles.particle_init_uniform = 0 # one particle per cell
+#particles.particle_restart_file = "./spray000002.p3d"
+
+# Set index locations for particle state vector and storage of field variables
+particles.pstate_loc = 1
+particles.pstate_u = 4
+particles.pstate_T = 7
+particles.pstate_dia = 8
+particles.pstate_rho = 9
+particles.pstate_ys_fuel = 10
+particles.pstate_nfuel = 1
+
+particles.fld_at_part_u = 1
+particles.fld_at_part_rho = 4
+particles.fld_at_part_T = 5
+particles.fld_at_part_p = 6
+particles.fld_at_part_molwt = 7
+particles.fld_at_part_ys = 8
+
+particles.fuel_species = 1
+particles.fuel_mass_frac = 1.
+# properties for n-dodecane
+particles.fuel_density = 0.66943 # g/cm^3 at 400 K
+particles.fuel_crit_temp = 658.2 # K
+particles.fuel_latent = 3.0294e9 # erg/g at 415 K
+particles.fuel_boil_temp = 489. # K
+particles.fuel_cp = 2.5939e7 # erg/g.K = 2.24e3 J/Kg.K at 400 K
+particles.fuel_molwt = 170.33   # g/mol
+particles.fuel_indx = 1 #Index of the species which constitutes the fuel
+
+# CHECKPOINT FILES
+#amr.checkpoint_files_output = 0
+amr.check_file      = chk        # root name of checkpoint file
+amr.check_int       = -1   # number of timesteps between checkpoints
+#amr.restart         = chk67550
+
+# PLOTFILES
+amr.plot_file       = plt        # root name of plotfile
+amr.plot_int        = 1          # number of timesteps between plotfiles
+#amr.plot_vars  =  density Temp
+#amr.derive_plot_vars = x_velocity y_velocity z_velocity pressure magvort particle_count
+
+#PROBIN FILENAME
+amr.probin_file = probin

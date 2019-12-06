@@ -1,0 +1,63 @@
+[
+
+ {
+    "action": "add_pipelines",
+    "pipelines":
+    {
+      "pipe1":
+      {
+          "f1":
+          {
+            "type": "histsampling",
+            "params":
+            {
+              "field": "Temperature",
+              "sample_rate": 0.9
+            }
+          }
+      }
+    }
+  },
+
+  {
+    "action": "add_scenes",
+    "scenes":
+    { "s3":
+      {
+        "plots":        
+        {
+          "p1":
+          {  
+            "type": "pseudocolor",
+            "pipeline": "pipe1",
+            "field": "valSampled"
+          }      
+        },
+        
+        "renders":
+        {
+          "r1":  
+            {
+              "type": "cinema",
+              "phi": "4",
+              "theta": "4",
+              "db_name": "PeleC_db_sampling",
+              "fg_color": [0.0, 0.0, 0.0],
+              "bg_color": [1.0, 1.0, 1.0],
+              "annotations": "true"
+            }
+        }
+      }
+    }
+  },
+
+
+
+  {
+   "action": "execute"
+  },
+
+  {
+   "action": "reset"
+  }
+]

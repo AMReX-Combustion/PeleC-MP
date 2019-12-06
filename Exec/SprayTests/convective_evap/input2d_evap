@@ -1,9 +1,9 @@
 # ------------------  INPUTS TO MAIN PROGRAM  -------------------
-max_step = 50000000
+max_step = 50000
 stop_time = 35
 
 # PROBLEM SIZE & GEOMETRY
-geometry.is_periodic = 0 0 1
+geometry.is_periodic = 1 0 1
 geometry.coord_sys   = 0  # 0 => cart, 1 => RZ  2=>spherical
 geometry.prob_lo     =  -33.  -33. -33.
 geometry.prob_hi     =  33. 33. 33.
@@ -15,13 +15,15 @@ amr.n_cell           =  16  16  16
 # 1 = Inflow             4 = SlipWall
 # 2 = Outflow            5 = NoSlipWall
 # >>>>>>>>>>>>>  BC FLAGS <<<<<<<<<<<<<<<<
-pelec.lo_bc       =  "UserBC" "Symmetry" "Interior"
-pelec.hi_bc       =  "UserBC" "Symmetry" "Interior"
+#pelec.lo_bc       =  "UserBC" "Symmetry" "Interior"
+#pelec.hi_bc       =  "UserBC" "Symmetry" "Interior"
+pelec.lo_bc       =  "Interior" "Symmetry" "Interior"
+pelec.hi_bc       =  "Interior" "Symmetry" "Interior"
 
 # WHICH PHYSICS
 pelec.do_hydro = 1
-#pelec.diffuse_vel = 1
-#pelec.diffuse_temp = 1
+pelec.diffuse_vel = 0
+pelec.diffuse_temp = 0
 pelec.do_react = 0
 pelec.do_grav = 0
 pelec.allow_negative_energy = 1
@@ -53,6 +55,7 @@ amr.n_error_buf     = 2 2 2 2 # number of buffer cells in error est
 pelec.do_spray_particles = 1
 particles.mass_transfer = 1
 particles.heat_transfer = 1
+particles.mom_transfer = 1
 pelec.v                  = 1
 particles.particle_output_file = "plt"
 particles.particle_init_uniform = 0 # one particle per cell

@@ -12,12 +12,12 @@
 /
 
 &flctin
- flct_file = "/ascldap/users/marient/current_new/PeleC/Exec/Turb_Jet_3D/turb.temporal.jet.new"
+ flct_file = "/gpfs/alpine/scratch/arientm/csc340/PeleC_Ascent/Exercises/pjet_flame/turb.temporal.jet.new"
 /
 
 &tagging
-  temperr = 1200.
-  max_temperr_lev = 1
+  temperr = 698.
+  max_temperr_lev = 3
 /
 
 &extern

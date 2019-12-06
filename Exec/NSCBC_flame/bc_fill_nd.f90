@@ -134,11 +134,11 @@ contains
     use eos_type_module
     use eos_module
     use meth_params_module, only : URHO, UMX, UMY, UMZ, UTEMP, UEDEN, UEINT, UFS, NVAR
-    use network, only: naux
+    use network, only: nspecies, naux
     use prob_params_module, only : Interior, Inflow, Outflow, SlipWall, NoSlipWall, &
                                    problo, probhi, dim
     use amrex_constants_module, only: M_PI
-    use chemistry_module, only : get_species_index, nspecies
+    use chemistry_module, only : get_species_index
     
     implicit none
 
