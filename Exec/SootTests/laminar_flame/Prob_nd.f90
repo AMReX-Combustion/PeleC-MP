@@ -12,7 +12,7 @@ subroutine amrex_probinit (init,name,namlen,problo,probhi) bind(c)
 
   integer untin,i
 
-  namelist /fortin/ flame_datafile, p_ref, T_ref, u_ref
+  namelist /fortin/ flame_datafile, p_ref
     
   ! Build "probin" filename -- the name of file containing fortin namelist.
   integer, parameter :: maxlen = 256
@@ -26,8 +26,6 @@ subroutine amrex_probinit (init,name,namlen,problo,probhi) bind(c)
   end do
 
   p_ref = 1.01325d6
-  u_ref = 0.
-  T_ref = 300.d0
 
   ! Read namelists
   untin = 9

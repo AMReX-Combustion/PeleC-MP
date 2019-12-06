@@ -2,15 +2,14 @@ PRECISION  = DOUBLE
 PROFILE    = FALSE
 
 DEBUG      = FALSE
-#DEBUG      = TRUE
 
-DIM        = 2
+DIM        = 1
 
 COMP	   = gcc
 
 USE_REACT = TRUE
 
-USE_MPI    = FALSE
+USE_MPI    = TRUE
 USE_OMP    = FALSE
 USE_GRAV   = FALSE
 
@@ -19,8 +18,8 @@ HYP_TYPE = PPM
 USE_SOOT = TRUE
 
 # If this is changes, must run a make clean and rerun make
-#NUM_SOOT_MOMENTS = 3
-NUM_SOOT_MOMENTS = 6
+NUM_SOOT_MOMENTS = 3
+#NUM_SOOT_MOMENTS = 6
 
 DEFINES += -DNUM_SOOT_MOMENTS=$(NUM_SOOT_MOMENTS)
 

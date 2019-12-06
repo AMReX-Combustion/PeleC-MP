@@ -65,10 +65,11 @@ amr.check_int       = 0   # number of timesteps between checkpoints
 amr.plot_file       = plt # root name of plotfile
 #amr.plot_int        = 10 # number of timesteps between plotfiles
 amr.plot_per        = 1.E-4 # plot period
-amr.plot_vars = density xmom ymom eden Temp M00 M10 M01 M20 M11 M02 N0 rho_O2 rho_N2 rho_CO2 rho_H2O rho_OH rho_H rho_H2 rho_A2 rho_N-C7H16 rho_C2H2
-amr.derive_plot_vars = x_velocity y_velocity NL VL SL pressure
+amr.plot_vars = density xmom ymom eden Temp rho_O2 rho_N2 rho_CO rho_H2O rho_OH rho_H rho_H2 rho_A2 rho_N-C7H16 rho_C2H2
+amr.derive_plot_vars = x_velocity y_velocity pressure soot_vars soot_large_particles
 amr.file_name_digits = 7
 
+pelec.plot_soot = 1
 pelec.plot_massfrac = 0
 
 #PROBIN FILENAME

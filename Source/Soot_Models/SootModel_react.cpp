@@ -44,8 +44,8 @@ SootModel::initializeReactData()
   // and pyrene(C16H10) and can only handle 1 PAH inception species
   std::string PAH_names[] = {"A2", "A3", "A4"};
   // Corresponding sticking coefficients
-  const Real PAH_gammas[] = {0.001, 0.0150, 0.025};
-  // Average number of C atoms per dimer
+  const Real PAH_gammas[] = {0.002, 0.015, 0.025};
+  // Average number of C atoms per PAH species
   const Real PAH_numC[] = {10., 14., 16.};
 
   // Determine which PAH inception species is being used
@@ -145,6 +145,13 @@ SootModel::initializeReactData()
 void
 SootModel::fillReactionData()
 {  
+  // Be sure that all other member data has been filled
+  BL_ASSERT(m_memberDataDefined);
+  if (m_sootVerbosity)
+    {
+      Print() << "SootModel::fillReactionData(): Filling reaction data"
+	      << std::endl;
+    }
   // Units are CGS
   // Demonstration of reaction indices using a fake reaction
   // Soot-H + 2OH + C2H2 <=> Soot-* + 4H + 2CO
@@ -258,7 +265,8 @@ SootModel::fillReactionData()
   nu_b[5][0] = 1.;
   sIndx_b[5] = SootIndx::indxSootH;
 
-  // 7. A4 + A4 => DIMER
+  // Last reaction MUST be the dimerization reaction
+  // 7. A# + A# => DIMER
   // TODO: Makes use of Arrhenius form similar to last reaction
   A_f[6] = m_betaDimerFact*std::sqrt(m_colFact)*0.5*m_gammaStick;
   n_f[6] = 0.5;
@@ -277,11 +285,14 @@ SootModel::chemicalSrc(const Real&         T,
 		       const Vector<Real>& xi_n,
 		       const Vector<Real>& moments,
 		       const Vector<Real>& momFV,
+		       Vector<Real>&       k_fwd,
+		       Vector<Real>&       k_bkwd,
+		       Vector<Real>&       w_fwd,
+		       Vector<Real>&       w_bkwd,
 		       Real&               k_sg,
 		       Real&               k_ox,
 		       Real&               k_o2,
-		       Vector<Real>&       omega_src,
-		       Real&               rho_src) const
+		       Vector<Real>&       omega_src) const
 {
   // Number of surface reactions
   const int nsr = m_numSurfReacts;
@@ -289,12 +300,6 @@ SootModel::chemicalSrc(const Real&         T,
   const int ngs = GasSpecIndx::numGasSpecs;
   // Number of soot types
   const int nss = SootIndx::numSootSpecs;
-  // Forwad and back reaction rates
-  Vector<Real> k_fwd(nsr);
-  Vector<Real> k_bkwd(nsr);
-  // Creation and destruction terms
-  Vector<Real> w_fwd(nsr, 0.);
-  Vector<Real> w_bkwd(nsr, 0.);
   const Real invT = 1./T;
   // Loop over reactions
   for (int i = 0; i != nsr; ++i)
@@ -304,17 +309,17 @@ SootModel::chemicalSrc(const Real&         T,
       Real fwdM = 1.;
       for (int j = 0; j != rNum[i]; ++j)
 	{
+	  // Reactant gas species index
 	  const int rIndx = nIndx_f[i][j];
-	  const Real rExp = nu_f[i][j];
-	  fwdM *= std::pow(xi_n[rIndx], rExp);
+	  fwdM *= std::pow(xi_n[rIndx], nu_f[i][j]);
 	}
       w_fwd[i] = k_fwd[i]*fwdM;
       Real bkwdM = 1.;
       for (int j = 0; j != pNum[i]; ++j)
 	{
+	  // Product gas species index
 	  const int pIndx = nIndx_b[i][j];
-	  const Real pExp = nu_b[i][j];
-	  bkwdM *= std::pow(xi_n[pIndx], pExp);
+	  bkwdM *= std::pow(xi_n[pIndx], nu_b[i][j]);
 	}
       w_bkwd[i] = k_bkwd[i]*bkwdM;
     }
@@ -363,15 +368,6 @@ SootModel::chemicalSrc(const Real&         T,
 	  omega_src[pIndx] += nupp*rate;
 	}
     }
-  // Loop over each species to convert to proper units
-  // and to compute continuity source term
-  rho_src = 0.;
-  for (int i = 0; i != ngs; ++i)
-    {
-      const Real cmm = m_gasMW[i];
-      omega_src[i] *= cmm;
-      rho_src += omega_src[i];
-    }
 }
 
 // Return fSootStar, fraction of hydrogenated sites that are radical sites
@@ -388,7 +384,7 @@ SootModel::computeRadSiteConc(const Vector<Real>& xi_n,
   // Factor r for the quasi-steady state concentration of radical sites, r1/r2
   Real r1 = (k_fwd[0]*C_OH + k_fwd[1]*C_H + k_fwd[2]);
   Real r2 = (k_bkwd[0]*C_H2O + k_bkwd[1]*C_H2 + k_bkwd[2]*C_H 
-	       + k_fwd[3]*C_C2H2);
+	     + k_fwd[3]*C_C2H2);
   return r1/(r2 + r1);
 }
 

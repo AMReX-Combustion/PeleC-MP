@@ -183,8 +183,8 @@ contains
     if (sgn == 1) then ! lo X
        relax_U = 1.0d0
        relax_V = 1.0d-5
-       relax_T = -0.1d0
-       beta = 1.d-5
+       relax_T = -0.2d0
+       beta = 1.d0
 
        which_bc_type = Inflow
        call flame_inflow(flame_Rho, flame_T, flame_U, flame_Y)
@@ -205,9 +205,11 @@ contains
        u(2) = zero
        u(3) = zero
        eos_state % massfrac(1:nspecies) = flame_Y(1:nspecies)
-       eos_state % rho = flame_Rho
+       !eos_state % rho = flame_Rho
        eos_state % T = flame_T
-       call eos_rt(eos_state)
+       eos_state % p = 1.01325d6
+       !call eos_rt(eos_state)
+       call eos_tp(eos_state)
     endif
 
     u_ext(URHO ) = eos_state % rho
@@ -221,7 +223,6 @@ contains
     do isoot = 1, nsoot
        u_ext(UFSOOT + isoot - 1) = u_int(UFSOOT + isoot - 1)
     enddo
-
 
     ! Here the optional parameters are filled by the local variables if they were present
     if (flag_nscbc == 1) then

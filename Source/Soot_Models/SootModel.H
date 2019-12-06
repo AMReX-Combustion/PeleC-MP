@@ -61,7 +61,7 @@ class SootModel
 {
 public:
   //
-  // Default constructor.
+  // Default constructor
   //
   SootModel ();
 
@@ -69,6 +69,7 @@ public:
   // Destructor
   //
   ~SootModel () {};
+
   //
   // Define instance of class
   //
@@ -94,10 +95,17 @@ public:
   // Compute HMOM source term
   //
   void addSootSourceTerm (const Box&       sbox,
+			  const FArrayBox& Ufab,
 			  const FArrayBox& Qfab,
 			  const FArrayBox& coeff_cc,
 			  FArrayBox&       Sfab,
-			  Real&            dt) const;
+			  const Real       time,
+			  const Real       dt) const;
+
+  //
+  // Clip moment values when necessary
+  //
+  void clipMoments(Vector<Real>& moments) const;
 
   /***********************************************************************
     Moment source term functions (SootModel.cpp)
@@ -129,9 +137,10 @@ public:
 			  Vector<Real>&       mom_src) const;
 
   //
-  // Compute the dimerization rate
+  // Compute the dimerization concentration
   //
-  Real dimerization (const Real&         convT,
+  Real dimerization (const Real&         T,
+		     const Real&         convT,
 		     const Real&         betaNucl,
 		     const Real&         betaDimer,
 		     const Real&         xi_PAH,
@@ -156,19 +165,6 @@ public:
     Reaction functions (SootModel_react.cpp)
   ***********************************************************************/
   //
-  // Compute surface and gas phase chemistry
-  //
-  void chemicalSrc (const Real&         T,
-		    const Vector<Real>& xi_n,
-		    const Vector<Real>& moments,
-		    const Vector<Real>& momFV,
-		    Real&               k_sg,
-		    Real&               k_ox,
-		    Real&               k_o2,
-		    Vector<Real>&       omega_src,
-		    Real&               rho_src) const;
-
-  //
   // Initialize reaction and species data
   //
   void initializeReactData();
@@ -177,6 +173,22 @@ public:
   // Fill surface reaction data
   //
   void fillReactionData();
+
+  //
+  // Compute surface and gas phase chemistry
+  //
+  void chemicalSrc (const Real&         T,
+		    const Vector<Real>& xi_n,
+		    const Vector<Real>& moments,
+		    const Vector<Real>& momFV,
+		    Vector<Real>&       k_fwd,
+		    Vector<Real>&       k_bkwd,
+		    Vector<Real>&       w_fwd,
+		    Vector<Real>&       w_bkwd,
+		    Real&               k_sg,
+		    Real&               k_ox,
+		    Real&               k_o2,
+		    Vector<Real>&       omega_src) const;
 
   //
   // Compute quasi-steady state concentration of radical sites
@@ -265,9 +277,20 @@ public:
     Inline functions
   ***********************************************************************/
   //
+  // Return the estimated soot time step and reset the member variable
+  //
+  inline Real estSootTimeStep() const
+  {
+    Real cur_dt = local_soot_dt;
+    // Reset time step
+    local_soot_dt = 1.E18;
+    return cur_dt;
+  }
+
+  //
   // Convert from soot index to the PelePhysics species index
   //
-  inline int gasIndxtoPeleP (const int gsIndx) const
+  inline int local2GlobalIndx (const int gsIndx) const
   {
     return m_gasSpecRefs[gsIndx];
   }
@@ -291,6 +314,19 @@ public:
     for (int i = 0; i != NUM_SOOT_MOMENTS + 1; ++i)
       {
 	mom_src[i] *= MomUnitConv[i];
+      }
+  }
+
+  //
+  // Convert moments from mol of C to CGS
+  //
+  static void convertMoltoCGS (Vector<Real>& mom_src,
+			       Vector<Real>& moments)
+  {
+    for (int i = 0; i != NUM_SOOT_MOMENTS + 1; ++i)
+      {
+	mom_src[i] *= MomUnitConv[i];
+	moments[i] *= MomUnitConv[i];
       }
   }
 
@@ -337,9 +373,10 @@ public:
   {
     for (int i = 0; i != NUM_SOOT_MOMENTS; ++i)
       {
-	moments[i] = 1.E-26*std::pow(40., 3.*(MomOrderV[i] + 2./3.*MomOrderS[i]));
+	moments[i] = m_smallWeight*
+	  std::pow(m_nuclVol, 3.*(MomOrderV[i] + m_two3rd*MomOrderS[i]));
       }
-    moments[NUM_SOOT_MOMENTS] = 1.E-26;
+    moments[NUM_SOOT_MOMENTS] = m_smallWeight;
     convertMoltoCGS(moments);
   }
 
@@ -362,10 +399,13 @@ public:
   /// Surface density of hydrogenate sites (1/cm^2)
   constexpr static Real m_SootChi = 1.7E15;
   /// Coefficients for fit to small surface area change
+  constexpr static Real m_two3rd = 2./3.;
   constexpr static Real m_SootFitC = 2./3.;
   constexpr static Real m_SootFitE = -0.2043;
   // Increase in number of carbon atoms for surface reactions
   constexpr static Real m_dVol = 2.;
+  // Small weight used for initialization and clipping
+  constexpr static Real m_smallWeight = 1.E-26;
 
   /// Gas constant in erg K^-1 mol^-1
   Real Rgas;
@@ -377,6 +417,11 @@ public:
   int m_sootVerbosity;
   /// Bool for checking if parameters have been read from input file
   bool m_readSootParams;
+  /// Bool for checking if member data has all been defined
+  bool m_memberDataDefined;
+  /// Mass is not conserved during OH oxidation
+  /// Mass can be conserved again by adding remaining lost mass to H2
+  bool m_conserveMass;
   /// Volume of smallest soot particles
   static Real m_V0;
   /// Surface area of smallest soot particles
@@ -400,12 +445,18 @@ public:
   /// Sticking coefficient of species used for dimerization
   Real m_gammaStick;
   /// Size of incepient soot particles (# of C)
-  Real m_dimerVol;
-  Real m_nuclVol;
+  static Real m_dimerVol;
+  static Real m_nuclVol;
   Real m_nuclSurf;
 
   // Name of soot variables to output (moments and weight of delta function)
   Vector<std::string> m_sootVarName;
+
+  // Time step estimation
+  mutable Real local_soot_dt;
+  // Maximum allowable change for mass fractions, density, or moments
+  // to adjust the time step
+  Real m_maxDtRate;
 
   /***********************************************************************
     Reaction member data

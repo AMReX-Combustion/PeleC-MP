@@ -3,12 +3,29 @@
 # This converts data from Canteras write_csv function to Fortran input
 # Assumes Cantera data is SI so it converts it CGS
 # Assumes Cantera outputs the mass fractions, not the mole fractions
+import argparse
 import numpy as np
 import sys
 import csv
 
-infile = 'initial_laminar_profile.csv'
-outfile = 'initial_flame_profile.dat'
+parser = argparse.ArgumentParser()
+
+parser.add_argument("-f", help="Input csv file name", type=str, default='')
+
+parser.add_argument("-out", help="Output file name", type=str, default='')
+
+args = parser.parse_args()
+
+infile = args.f
+outfile = args.out
+
+if (infile == ''):
+    inputfile = raw_input("Give input csv file name: ")
+    infile = inputfile
+if (outfile == ''):
+    inputfile = raw_input("Give desired output file name: ")
+    outfile = inputfile
+
 numrow = 0
 numcol = 0
 with open(infile) as csv_file:
@@ -54,7 +71,8 @@ with open(infile) as csv_file:
                 curcol = cncol + n
                 cndata[k-1,n] = float(row[curcol])
         k += 1
-
+finalx = xdata[numrow-1]
+startx = 0.
 with open(outfile, mode='w') as csv_file:
     headerstring = 'VARIABLES = \"X\" \"U\" \"T\" \"rho\"'
     for n in range(0,numspec):
@@ -63,8 +81,8 @@ with open(outfile, mode='w') as csv_file:
     csv_file.write(headerstring)
     csv_writer = csv.writer(csv_file, delimiter=' ',lineterminator='\n')
     k = 0
-    for row in range(0,numrow):
-        outval = np.array([xdata[k], udata[k], tdata[k], rhodata[k]])
+    for row in range(1,numrow):
+        outval = np.array([startx + xdata[k], udata[k], tdata[k], rhodata[k]])
         outval = np.append(outval, cndata[k,:])
         csv_writer.writerow(outval)
         k += 1
