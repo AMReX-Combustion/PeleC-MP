@@ -69,10 +69,10 @@ SootModel::initializeReactData()
   // Retrieve the molecular weights
   Vector<Real> species_mm(PeleC::NumSpec);
   get_mw(species_mm.dataPtr());
-  Vector<std::string> species_names(PeleC::NumSpec);
   // Loop over all species
   for (int i = 0; i != PeleC::NumSpec; ++i)
     {
+      // TODO: PeleC::spec_names should be public so we can avoid doing this
       int len = 20;
       Vector<int> int_spec_names(len);
       get_spec_names(int_spec_names.dataPtr(), &i, &len);
@@ -82,16 +82,16 @@ SootModel::initializeReactData()
 	  char_spec_names[j] = int_spec_names[j];
 	}
       char_spec_names[len] = '\0';
-      species_names[i] = std::string(char_spec_names);
+      std::string species_name = std::string(char_spec_names);
       // Check if species is the PAH inceptor
-      if (species_names[i] == m_PAHname)
+      if (species_name == m_PAHname)
 	{
 	  m_PAHindx = i;
 	}
       // Check if species matches others for surface reactions
       for (int sootSpec = 0; sootSpec != ngs; ++sootSpec)
 	{
-	  if (species_names[i] == m_gasSpecNames[sootSpec])
+	  if (species_name == m_gasSpecNames[sootSpec])
 	    {
 	      m_gasSpecRefs[sootSpec] = i;
 	      m_gasMW[sootSpec] = species_mm[i];
