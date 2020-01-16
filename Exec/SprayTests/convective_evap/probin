@@ -1,8 +1,8 @@
 &fortin
 
- u_ref = -300.d0
+ u_ref = -250.d0
  p_ref = 1.01325d6
- T_ref = 298d0
+ T_ref = 273d0
 
 /
 
